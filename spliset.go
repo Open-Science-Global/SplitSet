@@ -2,6 +2,7 @@ package splitset
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"regexp"
 
@@ -28,7 +29,8 @@ type Permutation struct {
 }
 
 type Fragment struct {
-	RegionOverhang   string
+	StartOverhang    string
+	EndOverhang      string
 	SequenceFragment string
 }
 
@@ -42,17 +44,29 @@ func SplitSet(sequence string, numberOfFragments int, spaceAround int) []Fragmen
 
 func getFragments(sequence string, permutation Permutation, positions []Overhang) []Fragment {
 	startPoint := 0
-
+	lastOverhang := ""
 	var fragments []Fragment
+
 	for _, overhang := range permutation.Overhangs {
+
 		for _, position := range positions {
 			if overhang == position.Sequence {
-				fragments = append(fragments, Fragment{overhang, sequence[startPoint:position.Start]})
-				startPoint = position.Start
+				if lastOverhang == "" {
+					lastOverhang = overhang
+					fragments = append(fragments, Fragment{"", lastOverhang, sequence[startPoint:position.End]})
+					startPoint = position.Start
+				} else {
+					fragments = append(fragments, Fragment{lastOverhang, overhang, sequence[startPoint:position.End]})
+					startPoint = position.Start
+					lastOverhang = overhang
+				}
 				break
 			}
 		}
 	}
+
+	fragments = append(fragments, Fragment{lastOverhang, "", sequence[startPoint:]})
+
 	return fragments
 }
 
@@ -85,7 +99,7 @@ func getRegions(sequence string, numberOfFragments int, spaceAround int) []Regio
 }
 
 func findBestOverhangs(regions []Region) Permutation {
-	freqTable := ReadFreqTableJSON("./dataset/freq_overhang_clean.json")
+	freqTable := ReadFreqTableJSON("./dataset/freq_overhang.json")
 	permutations := generatePermutations(regions)
 	var infos []Permutation
 	for _, permutation := range permutations {
@@ -107,6 +121,7 @@ func filterBestPermutationByInfo(infos []Permutation) Permutation {
 			bestPermutation = info
 			matches = info.Matches
 			mismatches = info.Mismatches
+			fmt.Println(bestPermutation)
 		}
 	}
 	return bestPermutation
