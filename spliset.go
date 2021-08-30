@@ -35,14 +35,14 @@ type Fragment struct {
 }
 
 func SplitSet(sequence string, numberOfFragments int, spaceAround int) []Fragment {
-	regions := getRegions(sequence, numberOfFragments, spaceAround)
-	overhangs := findBestOverhangs(regions)
-	positions := findPositions(regions, overhangs)
+	regions := GetRegions(sequence, numberOfFragments, spaceAround)
+	overhangs := FindBestOverhangs(regions)
+	positions := FindPositions(regions, overhangs)
 
-	return getFragments(sequence, overhangs, positions)
+	return GetFragments(sequence, overhangs, positions)
 }
 
-func getFragments(sequence string, permutation Permutation, positions []Overhang) []Fragment {
+func GetFragments(sequence string, permutation Permutation, positions []Overhang) []Fragment {
 	startPoint := 0
 	lastOverhang := ""
 	var fragments []Fragment
@@ -70,7 +70,7 @@ func getFragments(sequence string, permutation Permutation, positions []Overhang
 	return fragments
 }
 
-func findPositions(regions []Region, overhangs Permutation) []Overhang {
+func FindPositions(regions []Region, overhangs Permutation) []Overhang {
 	var locations []Overhang
 	for index, region := range regions {
 		overhang := overhangs.Overhangs[index]
@@ -85,7 +85,7 @@ func findPositions(regions []Region, overhangs Permutation) []Overhang {
 	return locations
 }
 
-func getRegions(sequence string, numberOfFragments int, spaceAround int) []Region {
+func GetRegions(sequence string, numberOfFragments int, spaceAround int) []Region {
 	fragmentSize := len(sequence) / numberOfFragments
 
 	var regions []Region
@@ -98,7 +98,7 @@ func getRegions(sequence string, numberOfFragments int, spaceAround int) []Regio
 	return regions
 }
 
-func findBestOverhangs(regions []Region) Permutation {
+func FindBestOverhangs(regions []Region) Permutation {
 	freqTable := ReadFreqTableJSON("./dataset/freq_overhang.json")
 	permutations := generatePermutations(regions)
 	var infos []Permutation
