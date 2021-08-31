@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"regexp"
 
+	"github.com/Open-Science-Global/poly/finder"
 	"github.com/Open-Science-Global/poly/transform"
 	"github.com/schwarmco/go-cartesian-product"
 )
@@ -83,6 +85,29 @@ func FindPositions(regions []Region, overhangs Permutation) []Overhang {
 		}
 	}
 	return locations
+}
+
+func GetRegionsPrioritizingProblems(sequence string, numberOfFragments int, spaceAround int, matches []finder.Match) []Region {
+	fragmentSize := len(sequence) / numberOfFragments
+
+	var regions []Region
+	for i := 1; i < numberOfFragments; i++ {
+		middle := fragmentSize * i
+		start := middle - spaceAround
+		end := middle + spaceAround
+		region := findMatchInsideRegion(sequence, start, end, matches)
+		regions = append(regions, region)
+	}
+	return regions
+}
+
+func findMatchInsideRegion(sequence string, start int, end int, matches []finder.Match) Region {
+	for _, match := range matches {
+		if match.Start >= start && match.End <= end {
+			return Region{sequence[match.Start+1 : match.End-1], match.Start, match.End}
+		}
+	}
+	return Region{sequence[start:end], start, end}
 }
 
 func GetRegions(sequence string, numberOfFragments int, spaceAround int) []Region {
@@ -201,4 +226,46 @@ func ReadFreqTableJSON(path string) map[string]map[string]int {
 	file, _ := ioutil.ReadFile(path)
 	codontable := ParseFreqTableJSON(file)
 	return codontable
+}
+
+func addSynclotronsToFragments(fragments []Fragment) string {
+	sequence := ""
+	for index, fragment := range fragments {
+		if index == 0 {
+			sequence += fragment.SequenceFragment
+			continue
+		}
+		sequence += createSynclotron("CGTCTC")
+		sequence += fragment.SequenceFragment
+	}
+	return sequence
+}
+
+func createSynclotron(restrictionBindingSite string) string {
+	var functions []func(string) []finder.Match
+	functions = append(functions, finder.RemoveRepeat(8))
+
+	synclotron := ""
+	haveRepetition := true
+	for haveRepetition {
+		synclotron = randomDnaSequence(1, int64(rand.Intn(100))) + transform.ReverseComplement(restrictionBindingSite) + randomDnaSequence(10, int64(rand.Intn(100))) + restrictionBindingSite + randomDnaSequence(1, int64(rand.Intn(100)))
+		problems := finder.Find(synclotron, functions)
+		if len(problems) == 0 {
+			return synclotron
+		}
+	}
+	return ""
+}
+
+func randomDnaSequence(length int, seed int64) string {
+	var dnaAlphabet = []rune("ATCG")
+	rand.Seed(seed)
+
+	randomSequence := make([]rune, length)
+
+	for basepair := range randomSequence {
+		randomIndex := rand.Intn(len(dnaAlphabet))
+		randomSequence[basepair] = dnaAlphabet[randomIndex]
+	}
+	return string(randomSequence)
 }
